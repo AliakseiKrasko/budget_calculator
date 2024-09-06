@@ -4,8 +4,21 @@ const title = document.querySelector("#title");
 const value = document.querySelector("#value");
 const incomesList = document.querySelector("#incomes-list");
 const expensesList = document.querySelector("#expenses-list");
+const budgetElement = document.querySelector("#budget");
+const totalIncomeElement = document.querySelector("#total-income");
+const totalExpensesElement = document.querySelector("#total-expense");
+const persentWrapper = document.querySelector("#expense-percents-wrapper");
+const monthElement = document.querySelector("#month");
+const yearElement = document.querySelector("#year");
+
 
 const budget = [];
+
+const priceFormater = new Intl.NumberFormat('ru-Ru', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+})
 
 function insertTestData() {
   const testData = [
@@ -19,7 +32,7 @@ function insertTestData() {
     { type: "exp", title: "Квартира", value: 500 },
   ];
 
-  function getRandomInt (max) {
+  function getRandomInt(max) {
     return Math.floor(Math.random() * max);
   }
 
@@ -30,16 +43,62 @@ function insertTestData() {
   value.value = randomData.value;
 }
 
-function clearForm () {
-    form.reset()
+function clearForm() {
+  form.reset();
 }
 
 function calcBudget() {
-    budget.reduce(function (total, element) {
-        
-    }, 0);
+  const totalIncome = budget.reduce(function (total, element) {
+    if (element.type === "inc") {
+      return total + element.value;
+    } else {
+      return total;
+    }
+  }, 0);
+
+  const totalExpense = budget.reduce(function (total, element) {
+    if (element.type === "exp") {
+      return total + element.value;
+    } else {
+      return total;
+    }
+  }, 0);
+
+  const totalBudget = totalIncome - totalExpense;
+  let expensePercents = 0;
+  if (totalIncome > 0) {
+    expensePercents = Math.round((totalExpense * 100) / totalIncome);
+  }
+
+
+  budgetElement.innerHTML = priceFormater.format(totalBudget);
+  totalIncomeElement.innerHTML = '+ ' + priceFormater.format(totalIncome);
+  totalExpensesElement.innerHTML = '- ' + priceFormater.format(totalExpense);
+
+  // Обновляем проценты, даже если они равны 0
+  if (expensePercents !== null && expensePercents !== undefined) {
+    const html = `<div class="header__value" id="budget">${expensePercents}%</div>`;
+    persentWrapper.innerHTML = html;
+  } else {
+    persentWrapper.innerHTML = "";
+  }
 }
 
+function displayMonth() {
+    const now = new Date();
+    const year = now.getFullYear();
+    
+    const timeFormater = new Intl.DateTimeFormat('ru-Ru', {
+        month: 'long',
+
+    });
+    const month = timeFormater.format(now);
+    monthElement.innerHTML = month;
+    yearElement.innerHTML = year;
+    
+}
+
+displayMonth();
 insertTestData();
 calcBudget();
 
@@ -64,21 +123,21 @@ form.addEventListener("submit", (e) => {
   if (budget.length > 0) {
     id = budget[budget.length - 1].id + 1;
   }
+
   const record = {
     id: id,
     type: type.value,
     title: title.value.trim(),
-    value: parseFloat(value.value),
+    value: +value.value,
   };
 
   budget.push(record);
-  console.log(budget);
 
   if (record.type === "inc") {
-    const html = `<li id="${record.id}" class="budget-list__item item item--income">
-            <div class="item__title">"${record.title}"</div>
+    const html = `<li data-id="${record.id}" class="budget-list__item item item--income">
+            <div class="item__title">${record.title}</div>
             <div class="item__right">
-            <div class="item__amount">+ "${record.value}"</div>
+            <div class="item__amount">+ ${priceFormater.format(record.value)}</div>
             <button class="item__remove">
             <img src="./img/circle-green.svg" alt="delete" />
             </button>
@@ -88,10 +147,10 @@ form.addEventListener("submit", (e) => {
   }
 
   if (record.type === "exp") {
-    const html = `<li data-id="${record.id}"                class="budget-list__item item item--expense">
-            <div class="item__title">"${record.title}"</div>
+    const html = `<li data-id="${record.id}" class="budget-list__item item item--expense">
+            <div class="item__title">${record.title}</div>
             <div class="item__right">
-            <div class="item__amount">- "${record.value}"</div>
+            <div class="item__amount">- ${priceFormater.format(record.value)}</div>
             <button class="item__remove">
             <img src="./img/circle-red.svg" alt="delete" />
             </button>
@@ -99,29 +158,29 @@ form.addEventListener("submit", (e) => {
           </li>`;
     expensesList.insertAdjacentHTML("afterbegin", html);
   }
+
   clearForm();
   insertTestData();
   calcBudget();
 });
 
-document.body.addEventListener('click', function(e) {
-    if (e.target.closest('button.item__remove')) {
-        const recordElement = e.target.closest('li.budget-list__item');
-        const id = +recordElement.dataset.id;
+document.body.addEventListener("click", function (e) {
+  if (e.target.closest("button.item__remove")) {
+    const recordElement = e.target.closest("li.budget-list__item");
+    const id = +recordElement.dataset.id;
 
-        // Поиск индекса элемента
-        const index = budget.findIndex(function (element) {
-            return id === element.id;
-        });
+    // Поиск индекса элемента
+    const index = budget.findIndex(function (element) {
+      return id === element.id;
+    });
 
-        // Проверка, что элемент найден
-        if (index !== -1) {
-            budget.splice(index, 1); // Удаление элемента
-        }
-
-        recordElement.remove(); // Удаление элемента
-
-        calcBudget(); 
+    // Проверка, что элемент найден
+    if (index !== -1) {
+      budget.splice(index, 1); // Удаление элемента
     }
-});
 
+    recordElement.remove(); // Удаление элемента
+
+    calcBudget();
+  }
+});
