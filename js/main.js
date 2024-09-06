@@ -1,26 +1,29 @@
-const form = document.querySelector("#form");
-const type = document.querySelector("#type");
-const title = document.querySelector("#title");
-const value = document.querySelector("#value");
-const incomesList = document.querySelector("#incomes-list");
-const expensesList = document.querySelector("#expenses-list");
-const budgetElement = document.querySelector("#budget");
+// Получаем ссылки на элементы формы и элементы для отображения данных
+const budgetForm = document.querySelector("#form");
+const transactionType = document.querySelector("#type");
+const transactionTitle = document.querySelector("#title");
+const transactionValue = document.querySelector("#value");
+const incomeList = document.querySelector("#incomes-list");
+const expenseList = document.querySelector("#expenses-list");
+const totalBudgetElement = document.querySelector("#budget");
 const totalIncomeElement = document.querySelector("#total-income");
-const totalExpensesElement = document.querySelector("#total-expense");
-const persentWrapper = document.querySelector("#expense-percents-wrapper");
+const totalExpenseElement = document.querySelector("#total-expense");
+const expensePercentWrapper = document.querySelector("#expense-percents-wrapper");
 const monthElement = document.querySelector("#month");
 const yearElement = document.querySelector("#year");
 
+// Массив для хранения всех записей бюджета
+let budgetRecords = JSON.parse(localStorage.getItem('budgetRecords')) || [];
 
-const budget = [];
-
-const priceFormater = new Intl.NumberFormat('ru-Ru', {
+// Форматирование цен для отображения в валюте
+const currencyFormatter = new Intl.NumberFormat('ru-RU', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 0,
-})
+});
 
-function insertTestData() {
+// Функция для вставки тестовых данных в форму
+function insertRandomTestData() {
   const testData = [
     { type: "inc", title: "Фриланс", value: 1500 },
     { type: "inc", title: "Зарплата", value: 2000 },
@@ -32,155 +35,137 @@ function insertTestData() {
     { type: "exp", title: "Квартира", value: 500 },
   ];
 
-  function getRandomInt(max) {
-    return Math.floor(Math.random() * max);
-  }
-
-  const randomIndex = getRandomInt(testData.length);
+  const randomIndex = Math.floor(Math.random() * testData.length);
   const randomData = testData[randomIndex];
-  type.value = randomData.type;
-  title.value = randomData.title;
-  value.value = randomData.value;
+  transactionType.value = randomData.type;
+  transactionTitle.value = randomData.title;
+  transactionValue.value = randomData.value;
 }
 
-function clearForm() {
-  form.reset();
+// Очищаем форму после добавления данных
+function resetForm() {
+  budgetForm.reset();
 }
 
-function calcBudget() {
-  const totalIncome = budget.reduce(function (total, element) {
-    if (element.type === "inc") {
-      return total + element.value;
-    } else {
-      return total;
-    }
-  }, 0);
+// Функция для расчета и обновления бюджета
+function calculateAndUpdateBudget() {
+  const totalIncome = budgetRecords
+    .filter(record => record.type === "inc")
+    .reduce((total, record) => total + record.value, 0);
 
-  const totalExpense = budget.reduce(function (total, element) {
-    if (element.type === "exp") {
-      return total + element.value;
-    } else {
-      return total;
-    }
-  }, 0);
+  const totalExpense = budgetRecords
+    .filter(record => record.type === "exp")
+    .reduce((total, record) => total + record.value, 0);
 
   const totalBudget = totalIncome - totalExpense;
-  let expensePercents = 0;
-  if (totalIncome > 0) {
-    expensePercents = Math.round((totalExpense * 100) / totalIncome);
-  }
+  const expensePercent = totalIncome > 0 ? Math.round((totalExpense * 100) / totalIncome) : 0;
 
+  // Обновляем отображение бюджета, доходов и расходов
+  totalBudgetElement.innerHTML = currencyFormatter.format(totalBudget);
+  totalIncomeElement.innerHTML = `+ ${currencyFormatter.format(totalIncome)}`;
+  totalExpenseElement.innerHTML = `- ${currencyFormatter.format(totalExpense)}`;
 
-  budgetElement.innerHTML = priceFormater.format(totalBudget);
-  totalIncomeElement.innerHTML = '+ ' + priceFormater.format(totalIncome);
-  totalExpensesElement.innerHTML = '- ' + priceFormater.format(totalExpense);
-
-  // Обновляем проценты, даже если они равны 0
-  if (expensePercents !== null && expensePercents !== undefined) {
-    const html = `<div class="header__value" id="budget">${expensePercents}%</div>`;
-    persentWrapper.innerHTML = html;
-  } else {
-    persentWrapper.innerHTML = "";
-  }
+  // Обновляем проценты расходов
+  expensePercentWrapper.innerHTML = expensePercent > 0 ? `<div class="header__value">${expensePercent}%</div>` : "";
+  
+  // Сохраняем данные в localStorage
+  localStorage.setItem('budgetRecords', JSON.stringify(budgetRecords));
 }
 
-function displayMonth() {
+// Функция для отображения текущего месяца и года
+function displayCurrentMonth() {
     const now = new Date();
     const year = now.getFullYear();
-    
-    const timeFormater = new Intl.DateTimeFormat('ru-Ru', {
+    const monthFormatter = new Intl.DateTimeFormat('ru-RU', {
         month: 'long',
-
     });
-    const month = timeFormater.format(now);
-    monthElement.innerHTML = month;
+
+    const currentMonth = monthFormatter.format(now);
+    monthElement.innerHTML = currentMonth;
     yearElement.innerHTML = year;
-    
 }
 
-displayMonth();
-insertTestData();
-calcBudget();
+// Функция для отображения записей
+function displayBudgetRecords() {
+  incomeList.innerHTML = '';
+  expenseList.innerHTML = '';
 
-form.addEventListener("submit", (e) => {
+  // Сортируем записи по типу и добавляем их в соответствующие списки
+  budgetRecords.forEach(record => {
+    const html = `
+      <li data-id="${record.id}" class="budget-list__item item item--${record.type === 'inc' ? 'income' : 'expense'}">
+        <div class="item__title">${record.title}</div>
+        <div class="item__right">
+          <div class="item__amount">${record.type === 'inc' ? '+' : '-'} ${currencyFormatter.format(record.value)}</div>
+          <button class="item__remove">
+            <img src="./img/circle-${record.type === 'inc' ? 'green' : 'red'}.svg" alt="delete" />
+          </button>
+        </div>
+      </li>
+    `;
+    if (record.type === "inc") {
+      incomeList.insertAdjacentHTML("beforeend", html);
+    } else {
+      expenseList.insertAdjacentHTML("beforeend", html);
+    }
+  });
+}
+
+// Инициализация страницы
+displayCurrentMonth();
+insertRandomTestData();
+displayBudgetRecords();
+calculateAndUpdateBudget();
+
+// Обработчик отправки формы
+budgetForm.addEventListener("submit", (e) => {
   e.preventDefault();
 
-  if (title.value.trim() === "") {
-    title.classList.add("form__input__error");
+  // Проверка корректности ввода
+  if (transactionTitle.value.trim() === "") {
+    transactionTitle.classList.add("form__input__error");
     return;
   } else {
-    title.classList.remove("form__input__error");
+    transactionTitle.classList.remove("form__input__error");
   }
 
-  if (value.value.trim() === "" || +value.value <= 0) {
-    value.classList.add("form__input__error");
+  if (transactionValue.value.trim() === "" || +transactionValue.value <= 0) {
+    transactionValue.classList.add("form__input__error");
     return;
   } else {
-    value.classList.remove("form__input__error");
+    transactionValue.classList.remove("form__input__error");
   }
 
-  let id = 1;
-  if (budget.length > 0) {
-    id = budget[budget.length - 1].id + 1;
-  }
+  // Генерация уникального ID
+  const recordId = budgetRecords.length > 0 ? budgetRecords[budgetRecords.length - 1].id + 1 : 1;
 
-  const record = {
-    id: id,
-    type: type.value,
-    title: title.value.trim(),
-    value: +value.value,
+  // Создаем новую запись бюджета
+  const newRecord = {
+    id: recordId,
+    type: transactionType.value,
+    title: transactionTitle.value.trim(),
+    value: +transactionValue.value,
   };
 
-  budget.push(record);
-
-  if (record.type === "inc") {
-    const html = `<li data-id="${record.id}" class="budget-list__item item item--income">
-            <div class="item__title">${record.title}</div>
-            <div class="item__right">
-            <div class="item__amount">+ ${priceFormater.format(record.value)}</div>
-            <button class="item__remove">
-            <img src="./img/circle-green.svg" alt="delete" />
-            </button>
-            </div>
-        </li>`;
-    incomesList.insertAdjacentHTML("beforeend", html);
-  }
-
-  if (record.type === "exp") {
-    const html = `<li data-id="${record.id}" class="budget-list__item item item--expense">
-            <div class="item__title">${record.title}</div>
-            <div class="item__right">
-            <div class="item__amount">- ${priceFormater.format(record.value)}</div>
-            <button class="item__remove">
-            <img src="./img/circle-red.svg" alt="delete" />
-            </button>
-            </div>
-          </li>`;
-    expensesList.insertAdjacentHTML("afterbegin", html);
-  }
-
-  clearForm();
-  insertTestData();
-  calcBudget();
+  // Добавляем запись в массив бюджета и обновляем отображение
+  budgetRecords.push(newRecord);
+  displayBudgetRecords();
+  resetForm();
+  insertRandomTestData();
+  calculateAndUpdateBudget();
 });
 
+// Обработчик удаления записей
 document.body.addEventListener("click", function (e) {
   if (e.target.closest("button.item__remove")) {
     const recordElement = e.target.closest("li.budget-list__item");
-    const id = +recordElement.dataset.id;
+    const recordId = +recordElement.dataset.id;
 
-    // Поиск индекса элемента
-    const index = budget.findIndex(function (element) {
-      return id === element.id;
-    });
+    // Находим и удаляем запись по ID
+    budgetRecords = budgetRecords.filter(record => record.id !== recordId);
 
-    // Проверка, что элемент найден
-    if (index !== -1) {
-      budget.splice(index, 1); // Удаление элемента
-    }
-
-    recordElement.remove(); // Удаление элемента
-
-    calcBudget();
+    // Удаляем элемент из DOM и обновляем данные
+    recordElement.remove();
+    calculateAndUpdateBudget();
   }
 });
