@@ -1,116 +1,81 @@
+import * as model from './model.js';
 import * as view from './view.js';
 
-// Массив для хранения всех записей бюджета
-let budget = JSON.parse(localStorage.getItem('budget')) || [];
-if (!Array.isArray(budget)) {
-  budget = [];
-}
+init();
 
-// Функция для вставки тестовых данных в форму
-function insertTestData() {
-  const testData = [
-    { type: "inc", title: "Фриланс", value: 1500 },
-    { type: "inc", title: "Зарплата", value: 2000 },
-    { type: "inc", title: "Кредит", value: 2000 },
-    { type: "inc", title: "Продажи", value: 1000 },
-    { type: "exp", title: "Продукты", value: 300 },
-    { type: "exp", title: "Отдых", value: 200 },
-    { type: "exp", title: "Транспорт", value: 200 },
-    { type: "exp", title: "Квартира", value: 500 },
-  ];
-
-  const randomIndex = Math.floor(Math.random() * testData.length);
-  const randomData = testData[randomIndex];
-
-    
-  view.renderTestData(randomData);
-     
-}
-
-
-// Функция для расчета и обновления бюджета
-function calcBudget() {
-  const totalIncome = budget
-    .filter(record => record.type === "inc")
-    .reduce((total, record) => total + record.value, 0);
-
-  const totalExpense = budget
-    .filter(record => record.type === "exp")
-    .reduce((total, record) => total + record.value, 0);
-
-  const totalBudget = totalIncome - totalExpense;
-  const expensePercents = totalIncome > 0 ? Math.round((totalExpense * 100) / totalIncome) : 0;
-
- 
-  
-  view.renderBudget(totalIncome,
-    totalExpense,
-    totalBudget,
-    expensePercents);
-}
-
-// Функция для отображения текущего месяца и года
-function displayMonth() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const timeFormater = new Intl.DateTimeFormat('ru-RU', {
-    month: 'long',
-  });
-
-  const month = timeFormater.format(now);
-  
-  view.renderManths(month, year);
-}
-
-// Функция для отображения записей
+// Функция для отображения всех записей бюджета
 function displayBudgetRecords() {
   view.elements.incomesList.innerHTML = '';
   view.elements.expensesList.innerHTML = '';
-
-  budget.forEach(record => {
+  model.budget.forEach(record => {
     view.renderRecord(record);
   });
 }
 
 // Инициализация страницы
-displayMonth();
-insertTestData(); // Вызов этой функции сразу после загрузки страницы
-displayBudgetRecords();
-calcBudget();
+document.addEventListener('DOMContentLoaded', () => {
+  // Отображаем текущий месяц и год
+  displayMonth();
+  
+  // Отображаем все записи из localStorage при загрузке страницы
+  displayBudgetRecords();
+  
+  // Пересчитываем и отображаем текущий бюджет
+  view.renderBudget(model.calcBudget());
 
-// Обработчик отправки формы
+  // Вставляем случайные данные в форму
+  insertTestData();
+});
+
+// Обработчик для добавления записи
 view.elements.form.addEventListener("submit", (e) => {
   e.preventDefault();
 
+  // Проверка заполненности полей
   if (!view.checkEmptyFields()) return;
+  
+  // Получаем данные из формы
+  const formData = view.getFormData();
 
-  const id = budget.length > 0 ? budget[budget.length - 1].id + 1 : 1;
-
-  const newRecord = {
-    id: id,
-    type: view.elements.type.value,
-    title: view.elements.title.value.trim(),
-    value: +view.elements.value.value,
-  };
-
-  budget.push(newRecord);
-  localStorage.setItem('budget', JSON.stringify(budget)); // Сохраняем бюджет
+  // Добавляем новую запись в модель
+  model.createRecord(formData);
+  
+  // Обновляем список записей
   displayBudgetRecords();
+  
+  // Очищаем форму
   view.clearForm();
-  insertTestData(); // Вставляем тестовые данные после каждой новой записи
-  calcBudget();
+  
+  // Вставляем случайные данные снова после добавления новой записи
+  insertTestData();
+  
+  // Обновляем отображение бюджета
+  view.renderBudget(model.calcBudget());
 });
 
-// Обработчик удаления записей
+// Обработчик для удаления записи
 document.body.addEventListener("click", function (e) {
   if (e.target.closest("button.item__remove")) {
-    const recordElement = e.target.closest("li.budget-list__item");
-    const id = +recordElement.dataset.id;
-
-    // Находим и удаляем запись по ID
-    budget = budget.filter(record => record.id !== id);
-    localStorage.setItem('budget', JSON.stringify(budget)); // Сохраняем изменения
-    recordElement.remove();
-    calcBudget();
+    const id = +view.removeRecord(e); // Получаем ID записи
+    model.deleteRecord(id);           // Удаляем запись из модели
+    displayBudgetRecords();           // Обновляем список записей
+    view.renderBudget(model.calcBudget()); // Пересчитываем и отображаем бюджет
   }
 });
+
+
+function init () {
+  displayMonth();
+  insertTestData();
+  view.renderBudget(model.calcBudget());
+}
+
+function insertTestData() {
+  const randomData = model.getTestData();
+  view.renderTestData(randomData);
+}
+
+function displayMonth() {
+  const monthYear = model.getMonthYear();
+  view.renderManths(monthYear.month, monthYear.year);
+}
