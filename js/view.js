@@ -65,26 +65,40 @@ function renderRecord(record) {
   }
 }
 
-function renderBudget(budgetSummary) {
+function renderBudget(totalIncome, totalExpense, totalBudget, expensePercents) {
   // Обновляем отображение бюджета, доходов и расходов
-  elements.budgetElement.innerHTML = priceFormater.format(
-    budgetSummary.totalBudget
-  );
+  elements.budgetElement.innerHTML = priceFormater.format(totalBudget);
   elements.totalIncomeElement.innerHTML = `+ ${priceFormater.format(
-    budgetSummary.totalIncome
+    totalIncome
   )}`;
   elements.totalExpensesElement.innerHTML = `- ${priceFormater.format(
-    budgetSummary.totalExpense
+    totalExpense
   )}`;
 
   // Обновляем проценты расходов
   elements.persentWrapper.innerHTML =
-    budgetSummary.expensePercents > 0
-      ? `<div class="header__value">${budgetSummary.expensePercents}%</div>`
+    expensePercents > 0
+      ? `<div class="header__value">${expensePercents}%</div>`
       : "";
 
   // Сохраняем данные в localStorage
   localStorage.setItem("budget", JSON.stringify(budget));
+}
+
+// Очищаем форму после добавления данных
+function clearForm() {
+  elements.form.reset();
+}
+
+function renderManths(month, year) {
+  elements.monthElement.innerHTML = month;
+  elements.yearElement.innerHTML = year;
+}
+
+function renderTestData(data) {
+    elements.type.value = data.type;
+    elements.title.value = data.title;
+    elements.value.value = data.value; 
 }
 
 export {
@@ -93,4 +107,7 @@ export {
   checkEmptyFields,
   renderRecord,
   renderBudget,
+  clearForm,
+  renderManths,
+  renderTestData
 };

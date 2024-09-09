@@ -21,15 +21,12 @@ function insertTestData() {
 
   const randomIndex = Math.floor(Math.random() * testData.length);
   const randomData = testData[randomIndex];
-  view.elements.type.value = randomData.type;
-  view.elements.title.value = randomData.title;
-  view.elements.value.value = randomData.value;
+
+    
+  view.renderTestData(randomData);
+     
 }
 
-// Очищаем форму после добавления данных
-function clearForm() {
-  view.elements.form.reset();
-}
 
 // Функция для расчета и обновления бюджета
 function calcBudget() {
@@ -44,14 +41,12 @@ function calcBudget() {
   const totalBudget = totalIncome - totalExpense;
   const expensePercents = totalIncome > 0 ? Math.round((totalExpense * 100) / totalIncome) : 0;
 
-  const budgetSummary = {
-    totalIncome,
+ 
+  
+  view.renderBudget(totalIncome,
     totalExpense,
     totalBudget,
-    expensePercents,
-  };
-  
-  view.renderBudget(budgetSummary);
+    expensePercents);
 }
 
 // Функция для отображения текущего месяца и года
@@ -63,8 +58,8 @@ function displayMonth() {
   });
 
   const month = timeFormater.format(now);
-  view.elements.monthElement.innerHTML = month;
-  view.elements.yearElement.innerHTML = year;
+  
+  view.renderManths(month, year);
 }
 
 // Функция для отображения записей
@@ -101,7 +96,7 @@ view.elements.form.addEventListener("submit", (e) => {
   budget.push(newRecord);
   localStorage.setItem('budget', JSON.stringify(budget)); // Сохраняем бюджет
   displayBudgetRecords();
-  clearForm();
+  view.clearForm();
   insertTestData(); // Вставляем тестовые данные после каждой новой записи
   calcBudget();
 });
