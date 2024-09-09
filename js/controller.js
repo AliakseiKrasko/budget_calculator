@@ -1,3 +1,5 @@
+import * as view from './view.js';
+
 // Получаем ссылки на элементы формы и элементы для отображения данных
 const form = document.querySelector("#form");
 const type = document.querySelector("#type");
@@ -15,12 +17,7 @@ const yearElement = document.querySelector("#year");
 // Массив для хранения всех записей бюджета
 let budget = JSON.parse(localStorage.getItem('budget')) || [];
 
-// Форматирование цен для отображения в валюте
-const priceFormater = new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-});
+
 
 // Функция для вставки тестовых данных в форму
 function insertTestData() {
@@ -61,9 +58,9 @@ function calcBudget() {
   const expensePercents = totalIncome > 0 ? Math.round((totalExpense * 100) / totalIncome) : 0;
 
   // Обновляем отображение бюджета, доходов и расходов
-  budgetElement.innerHTML = priceFormater.format(totalBudget);
-  totalIncomeElement.innerHTML = `+ ${priceFormater.format(totalIncome)}`;
-  totalExpensesElement.innerHTML = `- ${priceFormater.format(totalExpense)}`;
+  budgetElement.innerHTML = view.priceFormater.format(totalBudget);
+  totalIncomeElement.innerHTML = `+ ${view.priceFormater.format(totalIncome)}`;
+  totalExpensesElement.innerHTML = `- ${view.priceFormater.format(totalExpense)}`;
 
   // Обновляем проценты расходов
   persentWrapper.innerHTML = expensePercents > 0 ? `<div class="header__value">${expensePercents}%</div>` : "";
@@ -89,27 +86,13 @@ function displayMonth() {
 function displayBudgetRecords() {
   incomesList.innerHTML = '';
   expensesList.innerHTML = '';
-
-  // Отображаем все записи бюджета
+  
+  // Проходим по каждому элементу бюджета и отображаем его
   budget.forEach(record => {
-    const html = `
-      <li data-id="${record.id}" class="budget-list__item item item--${record.type === 'inc' ? 'income' : 'expense'}">
-        <div class="item__title">${record.title}</div>
-        <div class="item__right">
-          <div class="item__amount">${record.type === 'inc' ? '+' : '-'} ${priceFormater.format(record.value)}</div>
-          <button class="item__remove">
-            <img src="./img/circle-${record.type === 'inc' ? 'green' : 'red'}.svg" alt="delete" />
-          </button>
-        </div>
-      </li>
-    `;
-    if (record.type === "inc") {
-      incomesList.insertAdjacentHTML("beforeend", html);
-    } else {
-      expensesList.insertAdjacentHTML("afterbegin", html);
-    }
+    view.renderRecord(record);
   });
 }
+
 
 // Инициализация страницы
 displayMonth();
@@ -121,21 +104,10 @@ calcBudget();
 form.addEventListener("submit", (e) => {
   e.preventDefault();
 
-  // Проверка корректности ввода
-  if (title.value.trim() === "") {
-    title.classList.add("form__input__error");
-    return;
-  } else {
-    title.classList.remove("form__input__error");
-  }
-
-  if (value.value.trim() === "" || +value.value <= 0) {
-    value.classList.add("form__input__error");
-    return;
-  } else {
-    value.classList.remove("form__input__error");
-  }
-
+  
+  if (!view.checkEmptyFields()) return;
+  
+ 
   // Генерация уникального ID
   const id = budget.length > 0 ? budget[budget.length - 1].id + 1 : 1;
 
